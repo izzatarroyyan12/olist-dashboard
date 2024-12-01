@@ -36,6 +36,6 @@ This will start the app on your local server (usually http://localhost:8501).
 This dashboard uses the Olist dataset, which contains data about an e-commerce platform in Brazil. You can access the dataset on [Kaggle here](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce/data).
 
 ## Technologies Used
-Streamlit: For building the interactive web app.
-Plotly: For data visualization.
-Pandas: For data manipulation and analysis.
+- **Streamlit**: For building the interactive web app.
+- **Plotly**: For data visualization.
+- **Pandas**: For data manipulation and analysis.
