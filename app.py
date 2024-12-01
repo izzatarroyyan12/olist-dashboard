@@ -151,11 +151,6 @@ elif selection == "Order Trends":
                           .merge(products[['product_id', 'product_category_name']], on='product_id', how='left')\
                           .merge(category_translation[['product_category_name', 'product_category_name_english']], 
                                  left_on='product_category_name', right_on='product_category_name', how='left')
-
-    # Orders per month
-    orders_per_month = merged_orders.groupby('month').size().reset_index(name='count')
-    fig = px.line(orders_per_month, x='month', y='count', title='Orders Over Time', markers=True, line_shape='linear')
-    st.plotly_chart(fig)
     
     # Filter by time and product categories
     st.subheader("Filter by Time and Product Categories")
@@ -194,6 +189,7 @@ elif selection == "Order Trends":
             (merged_orders['month'].dt.to_period('M') <= end_month_period)
         ]
 
+        # Apply product category filter if selected
         if product_category:
             filtered_orders = filtered_orders[
                 filtered_orders['product_category_name_english'].isin(product_category)
@@ -215,6 +211,7 @@ elif selection == "Order Trends":
             line_shape='linear'
         )
         st.plotly_chart(fig_filtered)
+
 
 
 # Page 3: Payment Methods Analysis
