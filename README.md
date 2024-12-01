@@ -36,7 +36,7 @@ git clone https://github.com/izzatarroyyan12/olist-dashboard.git
 Make sure you have Python installed. It’s recommended to use a virtual environment.
 To install the required libraries, navigate to the project directory and run the following command:
 ```bash
-cd olist-dataset-dashboard
+cd olist-dashboard
 pip install -r requirements.txt
 ```
 ### 3. Run the Streamlit app
