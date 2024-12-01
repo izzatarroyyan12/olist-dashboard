@@ -159,28 +159,63 @@ elif selection == "Order Trends":
     
     # Filter by time and product categories
     st.subheader("Filter by Time and Product Categories")
-    unique_months = sorted(merged_orders['month'].apply(lambda x: pd.to_datetime(x)).unique())
 
-    # Time period filter
-    start_date = st.date_input("Select Start Date", min(unique_months), min_value=min(unique_months), max_value=max(unique_months))
-    end_date = st.date_input("Select End Date", max(unique_months), min_value=min(unique_months), max_value=max(unique_months))
+    # Ensure 'month' is in datetime format
+    merged_orders['month'] = pd.to_datetime(merged_orders['month'], format='%Y-%m')
 
-    # Product category filter
-    product_categories = category_translation['product_category_name_english'].unique()
-    product_category = st.multiselect("Select Product Categories", options=product_categories, default=[])
+    # Get unique months as datetime and sort them
+    unique_months = sorted(merged_orders['month'].unique())
 
-    # Filter data based on inputs
-    start_date_str = start_date.strftime('%Y-%m')
-    end_date_str = end_date.strftime('%Y-%m')
-    filtered_orders = merged_orders[(merged_orders['month'] >= start_date_str) & (merged_orders['month'] <= end_date_str)]
-    
-    if product_category:
-        filtered_orders = filtered_orders[filtered_orders['product_category_name_english'].isin(product_category)]
-    
-    # Update visualization with filtered data
-    filtered_orders_per_month = filtered_orders.groupby('month').size().reset_index(name='count')
-    fig_filtered = px.line(filtered_orders_per_month, x='month', y='count', title=f'Orders Over Time ({", ".join(product_category) if product_category else "All Categories"})', markers=True, line_shape='linear')
-    st.plotly_chart(fig_filtered)
+    # Convert unique months to Period for filtering (to only keep year and month)
+    unique_months_periods = [month.to_period('M') for month in unique_months]
+
+    # Convert unique months periods back to string for the selectbox options
+    unique_months_str = [month.strftime('%B %Y') for month in unique_months_periods]
+
+    # Time period filter (Month-Year selection)
+    start_month = st.selectbox("Select Start Month", unique_months_str, index=0)
+    end_month = st.selectbox("Select End Month", unique_months_str, index=len(unique_months_str) - 1)
+
+    # Convert the selected months back to Period for filtering
+    start_month_period = pd.Period(start_month, freq='M')
+    end_month_period = pd.Period(end_month, freq='M')
+
+    # Ensure start_month_period is not after end_month_period
+    if start_month_period >= end_month_period:
+        st.error("The Start Month cannot be the same as or later than the End Month. Please modify your selection.")
+    else:
+        # Product category filter
+        product_categories = category_translation['product_category_name_english'].unique()
+        product_category = st.multiselect("Select Product Categories", options=product_categories, default=[])
+
+        # Filter data based on the selected months
+        filtered_orders = merged_orders[
+            (merged_orders['month'].dt.to_period('M') >= start_month_period) &
+            (merged_orders['month'].dt.to_period('M') <= end_month_period)
+        ]
+
+        if product_category:
+            filtered_orders = filtered_orders[
+                filtered_orders['product_category_name_english'].isin(product_category)
+            ]
+
+        # Update visualization with filtered data
+        filtered_orders_per_month = (
+            filtered_orders.groupby(filtered_orders['month'].dt.to_period("M").astype(str))
+            .size()
+            .reset_index(name='count')
+        )
+
+        fig_filtered = px.line(
+            filtered_orders_per_month,
+            x='month',
+            y='count',
+            title=f"Orders Over Time ({', '.join(product_category) if product_category else 'All Categories'})",
+            markers=True,
+            line_shape='linear'
+        )
+        st.plotly_chart(fig_filtered)
+
 
 # Page 3: Payment Methods Analysis
 elif selection == "Payment Methods":
@@ -193,8 +228,8 @@ elif selection == "Payment Methods":
     
     # Ensure the necessary columns are in datetime format for date filtering
     orders['order_purchase_timestamp'] = pd.to_datetime(orders['order_purchase_timestamp'])
-    orders['month'] = orders['order_purchase_timestamp'].dt.to_period('M').astype(str)
-    
+    orders['month'] = orders['order_purchase_timestamp'].dt.to_period('M')
+
     # Merge payments with orders on 'order_id' to include timestamp and month
     merged_data = payments.merge(
         orders[['order_id', 'order_purchase_timestamp', 'month']], 
@@ -204,44 +239,58 @@ elif selection == "Payment Methods":
     # Group by month and payment_type to get counts of each payment method per month
     payment_method_count = merged_data.groupby(['month', 'payment_type']).size().reset_index(name='count')
     
-    # Filter by Time Period (with unique months)
-    unique_months = sorted(pd.to_datetime(payment_method_count['month']).unique())
-    start_date = st.date_input("Select Start Date", min(unique_months), min_value=min(unique_months), max_value=max(unique_months))
-    end_date = st.date_input("Select End Date", max(unique_months), min_value=min(unique_months), max_value=max(unique_months))
+    # Convert 'month' to string for display (e.g., "January 2022")
+    payment_method_count['month_str'] = payment_method_count['month'].dt.strftime('%B %Y')
+    unique_months = sorted(payment_method_count['month'].unique())
+    unique_months_str = [month.strftime('%B %Y') for month in unique_months]
+    
+    # Month-Year Range Selector
+    start_month = st.selectbox("Select Start Month", unique_months_str, index=0)
+    end_month = st.selectbox("Select End Month", unique_months_str, index=len(unique_months_str) - 1)
+    
+    # Convert selected strings back to Period for filtering
+    start_month_period = pd.Period(start_month, freq='M')  # Specify frequency 'M' for months
+    end_month_period = pd.Period(end_month, freq='M')
+    
+    if start_month_period >= end_month_period:
+        st.error("The Start Month cannot be the same as or later than the End Month. Please modify your selection.")
+    else:
+        # Filter the data based on the selected range
+        filtered_data = payment_method_count[
+            (payment_method_count['month'] >= start_month_period) & 
+            (payment_method_count['month'] <= end_month_period)
+        ]
+        
+        # Filter by Payment Method (multi-select)
+        payment_types = st.multiselect(
+            "Select Payment Methods",
+            options=merged_data['payment_type'].unique(),
+            default=merged_data['payment_type'].unique()  # Set default as all payment types selected
+        )
+        
+        # Apply the payment method filter
+        if payment_types:
+            filtered_data = filtered_data[filtered_data['payment_type'].isin(payment_types)]
+        
+        # Visualization: Plot payment methods over the selected time range
+        fig = px.bar(
+            filtered_data, 
+            x='month_str', 
+            y='count', 
+            color='payment_type', 
+            title='Payment Methods Over Time',
+            labels={'count': 'Transaction Count', 'month_str': 'Month', 'payment_type': 'Payment Method'},
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        
+        # Set barmode to 'group' for a clustered bar chart
+        fig.update_layout(
+            barmode='group',  # Cluster bars side by side
+            width=1100,       # Increase figure width
+            height=600,       # Increase figure height
+        )
+        st.plotly_chart(fig)
 
-    # Ensure the date inputs are correctly aligned to the 'month' format
-    start_date_str = start_date.strftime('%Y-%m')
-    end_date_str = end_date.strftime('%Y-%m')
-    
-    # Filter the data based on the selected date range
-    filtered_data = payment_method_count[
-        (payment_method_count['month'] >= start_date_str) & 
-        (payment_method_count['month'] <= end_date_str)
-    ]
-    
-    # Filter by Payment Method (multi-select)
-    payment_types = st.multiselect(
-        "Select Payment Methods",
-        options=merged_data['payment_type'].unique(),
-        default=merged_data['payment_type'].unique()  # Set default as all payment types selected
-    )
-    
-    # Apply the payment method filter
-    if payment_types:
-        filtered_data = filtered_data[filtered_data['payment_type'].isin(payment_types)]
-    
-    # Visualization: Plot payment methods over the selected time range
-    fig = px.bar(
-        filtered_data, 
-        x='month', 
-        y='count', 
-        color='payment_type', 
-        title='Payment Methods Over Time',
-        labels={'count': 'Transaction Count', 'month': 'Month', 'payment_type': 'Payment Method'},
-        color_discrete_sequence=px.colors.qualitative.Set2
-    )
-    
-    st.plotly_chart(fig)
 
 # Footer
 st.markdown("<div class='footer'>Created with ❤️ by Izzat Arroyyan</div>", unsafe_allow_html=True)
