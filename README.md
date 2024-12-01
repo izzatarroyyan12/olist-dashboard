@@ -53,3 +53,6 @@ This dashboard uses the Olist dataset, which contains data about an e-commerce p
 - **Streamlit**: For building the interactive web app.
 - **Plotly**: For data visualization.
 - **Pandas**: For data manipulation and analysis.
+- **Numpy**: For numerical operations.
+- **Matplotlib**: For additional data visualization.
+- **Seaborn**: For statistical data visualization and advanced plotting.
