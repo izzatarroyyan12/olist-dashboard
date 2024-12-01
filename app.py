@@ -61,7 +61,7 @@ if selection == "Landing Page":
     st.title("Olist Dataset Dashboard")
     st.subheader("About the Creator")
     st.write("""
-    This dashboard was created by **Izzat Arroyyan** as part of the **IDCamp Data Science Path assignment**.
+    This dashboard was created by **Izzat Arroyyan**.
     """)
     st.write("Find more about me:")
 
