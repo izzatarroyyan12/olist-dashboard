@@ -162,7 +162,8 @@ elif selection == "Order Trends":
     unique_months = sorted(merged_orders['month'].unique())
 
     # Convert unique months to Period for filtering (to only keep year and month)
-    unique_months_periods = [month.to_period('M') for month in unique_months]
+    # Convert each month to pandas Period type
+    unique_months_periods = [pd.to_datetime(month).to_period('M') for month in unique_months]
 
     # Convert unique months periods back to string for the selectbox options
     unique_months_str = [month.strftime('%B %Y') for month in unique_months_periods]
